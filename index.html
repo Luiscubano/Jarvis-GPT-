@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis GPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "marked": "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js",
+          "dompurify": "https://cdn.jsdelivr.net/npm/dompurify/dist/purify.es.min.js",
+          "jszip": "https://esm.sh/jszip@3.10.1",
+          "@websim/websim-socket": "https://esm.websim.com/@websim/websim-socket"
+        }
+      }
+    </script>
+</head>
+<body class="bg-black text-gray-100 font-sans h-full">
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <img id="modal-logo" src="logo.png" alt="Jarvis Logo" class="mx-auto mb-4">
+            <h2 class="text-2xl font-bold mb-4">JARVIS GPT</h2>
+            <p class="mb-4">Introduce la contraseña maestra para acceder.</p>
+            <form id="password-form">
+                <input type="password" id="password-input" class="w-full px-4 py-2 border rounded-md bg-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Contraseña...">
+                <p id="error-message" class="text-red-500 text-sm mt-2 hidden">Contraseña incorrecta. Acceso denegado.</p>
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                    Acceder
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div id="chat-container" class="hidden h-full w-full flex relative">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-gray-900 text-white w-64 flex-shrink-0 flex flex-col p-4 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 absolute md:relative z-30 h-full">
+            <div class="flex items-center justify-between mb-6">
+                 <div class="flex items-center space-x-3">
+                    <img id="header-logo" src="logo.png" alt="Jarvis Logo" class="w-10 h-10">
+                    <h1 class="text-xl font-bold">Combinaciones</h1>
+                </div>
+                 <button id="sidebar-close-button" class="md:hidden text-xl p-2 rounded-full hover:bg-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <button id="new-combination-button" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md mb-4 transition duration-300">
+                <i class="fas fa-plus mr-2"></i>Nueva Combinación
+            </button>
+
+            <nav id="combinations-list" class="flex-1 overflow-y-auto space-y-2">
+                <!-- Saved combinations will be listed here -->
+            </nav>
+
+            <div id="sidebar-footer" class="mt-4 border-t border-gray-700 pt-4">
+                 <button id="theme-switcher" class="text-sm p-2 rounded-md hover:bg-gray-700 flex items-center w-full text-left" title="Cambiar Tema">
+                    <i class="fas fa-sun w-6 text-center"></i>
+                    <span class="ml-2">Tema</span>
+                </button>
+                <button id="download-project-button" class="text-sm p-2 rounded-md hover:bg-gray-700 flex items-center w-full text-left" title="Descargar Proyecto">
+                    <i class="fas fa-download w-6 text-center"></i>
+                    <span class="ml-2">Descargar</span>
+                </button>
+                 <button id="logout-button" class="text-sm p-2 rounded-md hover:bg-gray-700 flex items-center w-full text-left" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                    <span class="ml-2">Salir</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div id="main-content-area" class="flex-1 flex flex-col bg-gray-800/50">
+             <header class="bg-gray-900 shadow-md p-4 flex items-center justify-between md:justify-end">
+                <button id="sidebar-open-button" class="md:hidden text-xl p-2 rounded-full hover:bg-gray-700" title="Abrir menú">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="flex items-center space-x-3">
+                     <button id="tts-toggle" class="text-xl p-2 rounded-full hover:bg-gray-700" title="Activar/Desactivar lectura de voz">
+                        <i class="fas fa-volume-up w-6 text-center"></i>
+                    </button>
+                     <button id="clear-history-button" class="text-xl p-2 rounded-full hover:bg-gray-700" title="Borrar Combinación Actual">
+                        <i class="fas fa-trash-alt w-6 text-center"></i>
+                    </button>
+                </div>
+            </header>
+            <main id="messages-container" class="flex-1 p-6 overflow-y-auto">
+                <!-- Chat messages will be appended here -->
+            </main>
+            <footer class="bg-gray-900 p-2 sm:p-4">
+                <div id="attachments-preview" class="pb-2 flex flex-wrap gap-2"></div>
+                <form id="chat-form" class="flex items-center space-x-1 sm:space-x-2">
+                    <input type="file" id="file-input" multiple hidden>
+                    <button type="button" id="upload-button" class="text-lg sm:text-xl p-2 sm:p-3 rounded-full hover:bg-gray-700 text-gray-400" title="Adjuntar archivos">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="text" id="chat-input" class="flex-1 px-4 py-3 border rounded-lg bg-gray-800 border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white min-w-0" placeholder="Escribe tu pregunta a Jarvis..." autocomplete="off">
+                    <button type="button" id="mic-button" class="text-lg sm:text-xl p-2 sm:p-3 rounded-full hover:bg-gray-700 text-gray-400" title="Grabar voz">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button type="button" id="image-gen-button" class="text-lg sm:text-xl p-2 sm:p-3 rounded-full hover:bg-gray-700 text-gray-400" title="Generar Imagen">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button type="submit" id="send-button" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-3 sm:px-4 rounded-lg transition duration-300">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Image Generation Modal -->
+    <div id="image-gen-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <div id="image-gen-form-container">
+                <h2 class="text-2xl font-bold mb-4">Generar Imagen desde Texto</h2>
+                <form id="image-gen-form">
+                    <textarea id="image-prompt-input" class="w-full px-4 py-2 border rounded-md bg-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500" rows="4" placeholder="Describe la imagen que quieres crear... (ej. un astronauta en un caballo en marte, fotorrealista)"></textarea>
+                    
+                    <div class="mt-4">
+                        <label class="block mb-2 text-sm font-medium">Relación de Aspecto:</label>
+                        <div class="flex flex-wrap gap-2 sm:gap-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="aspect_ratio" value="1:1" class="form-radio text-cyan-600" checked>
+                                <span class="ml-2">Cuadrado (1:1)</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="aspect_ratio" value="16:9" class="form-radio text-cyan-600">
+                                <span class="ml-2">Horizontal (16:9)</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="aspect_ratio" value="9:16" class="form-radio text-cyan-600">
+                                <span class="ml-2">Vertical (9:16)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="inline-flex items-center cursor-pointer">
+                          <input type="checkbox" id="transparent-bg-toggle" value="" class="sr-only peer">
+                          <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-300 dark:peer-focus:ring-cyan-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-600"></div>
+                          <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Fondo Transparente</span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end mt-6 space-x-4">
+                        <button type="button" id="cancel-image-gen" class="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white font-bold">Cancelar</button>
+                        <button type="submit" id="submit-image-gen" class="px-4 py-2 rounded-md bg-cyan-600 hover:bg-cyan-700 text-white font-bold flex items-center">
+                            <i class="fas fa-magic mr-2"></i>Generar
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div id="image-gen-loading" class="hidden text-center">
+                <p>Generando tu imagen... Esto puede tardar un momento.</p>
+                <div class="typing-indicator mt-4 flex justify-center"><span></span><span></span><span></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="main.js" type="module"></script>
+</body>
+</html>

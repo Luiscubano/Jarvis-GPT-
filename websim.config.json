@@ -1,0 +1,25 @@
+{
+  "database": {
+    "schema": {
+      "combinations": {
+        "id": {
+          "type": "uuid",
+          "description": "The unique identifier for the combination/conversation."
+        },
+        "name": {
+          "type": "text",
+          "description": "The user-given name for the combination."
+        },
+        "history": {
+          "type": "jsonb",
+          "description": "The full conversation history for this combination."
+        },
+        "user_id": {
+          "type": "uuid",
+          "description": "The ID of the user who owns this combination."
+        }
+      }
+    }
+  }
+}
+
